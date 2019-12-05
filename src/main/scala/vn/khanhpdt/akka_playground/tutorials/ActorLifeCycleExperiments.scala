@@ -1,4 +1,4 @@
-package vn.khanhpdt.akka_playground
+package vn.khanhpdt.akka_playground.tutorials
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorSystem, Behavior, PostStop, Signal}
