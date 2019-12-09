@@ -41,5 +41,19 @@ class DeviceGroupSpec extends ScalaTestWithActorTestKit with WordSpecLike {
       response1.deviceRef shouldBe response2.deviceRef
     }
 
+    "list all current registered devices" in {
+      val deviceGroup = spawn(DeviceGroup("group1"))
+      val probe = createTestProbe[DeviceRegistered]()
+
+      deviceGroup ! RegisterDevice(1, "group1", "device1", probe.ref)
+      deviceGroup ! RegisterDevice(2, "group1", "device2", probe.ref)
+      deviceGroup ! RegisterDevice(3, "group1", "device3", probe.ref)
+
+      val readProbe = createTestProbe[DeviceList]()
+      deviceGroup ! ListAllDevices(4, readProbe.ref)
+
+      readProbe.expectMessage(DeviceList(4, Set("device1", "device2", "device3")))
+    }
+
   }
 }

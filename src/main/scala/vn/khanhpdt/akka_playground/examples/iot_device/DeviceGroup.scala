@@ -24,6 +24,9 @@ class DeviceGroup(groupId: String, ctx: ActorContext[DeviceGroup.Command]) exten
       case RegisterDevice(_, gId, _, _) =>
         ctx.log.warn(s"Ignore RegisterDevice request for another group [$gId]")
         this
+      case ListAllDevices(requestId, replyTo) =>
+        replyTo ! DeviceList(requestId, devices.keySet.toSet)
+        this
     }
   }
 
@@ -45,5 +48,9 @@ object DeviceGroup {
   case class RegisterDevice(requestId: Int, groupId: String, deviceId: String, replyTo: ActorRef[DeviceRegistered]) extends Command
 
   case class DeviceRegistered(requestId: Int, deviceRef: ActorRef[Device.Command])
+
+  case class ListAllDevices(requestId: Int, replyTo: ActorRef[DeviceList]) extends Command
+
+  case class DeviceList(requestId: Int, deviceIds: Set[String])
 
 }
