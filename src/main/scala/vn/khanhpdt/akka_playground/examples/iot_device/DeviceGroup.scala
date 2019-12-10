@@ -8,6 +8,7 @@ import scala.collection.mutable
 class DeviceGroup(groupId: String, ctx: ActorContext[DeviceGroup.Command]) extends AbstractBehavior[DeviceGroup.Command](ctx) {
 
   import DeviceGroup._
+  import DeviceManager.{DeviceList, DeviceRegistered, ListAllDevices, RegisterDevice}
 
   ctx.log.info(s"Device group actor [$groupId] starting...")
 
@@ -26,12 +27,17 @@ class DeviceGroup(groupId: String, ctx: ActorContext[DeviceGroup.Command]) exten
       case RegisterDevice(_, gId, _, _) =>
         ctx.log.warn(s"Ignore RegisterDevice request for another group [$gId]")
         this
-      case ListAllDevices(requestId, replyTo) =>
-        replyTo ! DeviceList(requestId, devices.keySet.toSet)
+      case ListAllDevices(requestId, `groupId`, replyTo) =>
+        replyTo ! DeviceList(requestId, groupId, devices.keySet.toSet)
+        this
+      case ListAllDevices(_, gId, _) =>
+        ctx.log.warn(s"Ignore ListAllDevices request for another group [$gId]")
         this
       case DeviceStopped(`groupId`, deviceId) =>
         devices.remove(deviceId)
         this
+      case Stop =>
+        Behaviors.stopped
     }
   }
 
@@ -48,15 +54,9 @@ object DeviceGroup {
     Behaviors.setup[Command](ctx => new DeviceGroup(groupId, ctx))
   }
 
-  sealed trait Command
-
-  case class RegisterDevice(requestId: Int, groupId: String, deviceId: String, replyTo: ActorRef[DeviceRegistered]) extends Command
-
-  case class DeviceRegistered(requestId: Int, deviceRef: ActorRef[Device.Command])
-
-  case class ListAllDevices(requestId: Int, replyTo: ActorRef[DeviceList]) extends Command
-
-  case class DeviceList(requestId: Int, deviceIds: Set[String])
+  trait Command
 
   case class DeviceStopped(groupId: String, deviceId: String) extends Command
+
+  case object Stop extends Command
 }

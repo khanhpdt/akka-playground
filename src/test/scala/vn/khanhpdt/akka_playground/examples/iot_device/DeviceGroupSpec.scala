@@ -6,7 +6,7 @@ import org.scalatest.WordSpecLike
 class DeviceGroupSpec extends ScalaTestWithActorTestKit with WordSpecLike {
 
   import Device._
-  import DeviceGroup._
+  import DeviceManager._
 
   "Device group actor" must {
 
@@ -50,12 +50,12 @@ class DeviceGroupSpec extends ScalaTestWithActorTestKit with WordSpecLike {
       deviceGroup ! RegisterDevice(3, "group1", "device3", probe.ref)
 
       val readProbe = createTestProbe[DeviceList]()
-      deviceGroup ! ListAllDevices(4, readProbe.ref)
+      deviceGroup ! ListAllDevices(4, "group1", readProbe.ref)
 
-      readProbe.expectMessage(DeviceList(4, Set("device1", "device2", "device3")))
+      readProbe.expectMessage(DeviceList(4, "group1", Set("device1", "device2", "device3")))
     }
 
-    "update when a device actor is stopped" in {
+    "update device list when a device actor is stopped" in {
       val deviceGroup = spawn(DeviceGroup("group1"))
       val probe = createTestProbe[DeviceRegistered]()
       val readProbe = createTestProbe[DeviceList]()
@@ -65,15 +65,15 @@ class DeviceGroupSpec extends ScalaTestWithActorTestKit with WordSpecLike {
       deviceGroup ! RegisterDevice(2, "group1", "device2", probe.ref)
       deviceGroup ! RegisterDevice(3, "group1", "device3", probe.ref)
 
-      deviceGroup ! ListAllDevices(4, readProbe.ref)
-      readProbe.expectMessage(DeviceList(4, Set("device1", "device2", "device3")))
+      deviceGroup ! ListAllDevices(4, "group1", readProbe.ref)
+      readProbe.expectMessage(DeviceList(4, "group1", Set("device1", "device2", "device3")))
 
       deviceToStop ! Stop
       probe.expectTerminated(deviceToStop, probe.remainingOrDefault)
 
       readProbe.awaitAssert {
-        deviceGroup ! ListAllDevices(5, readProbe.ref)
-        readProbe.expectMessage(DeviceList(5, Set("device2", "device3")))
+        deviceGroup ! ListAllDevices(5, "group1", readProbe.ref)
+        readProbe.expectMessage(DeviceList(5, "group1", Set("device2", "device3")))
       }
     }
 
