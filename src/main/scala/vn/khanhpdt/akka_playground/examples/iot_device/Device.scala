@@ -21,6 +21,8 @@ class Device(ctx: ActorContext[Device.Command], groupId: String, deviceId: Strin
         lastTemperature = Some(temperature)
         replyTo ! TemperatureRecorded(id)
         this
+      case Stop =>
+        Behaviors.stopped
     }
   }
 
@@ -46,5 +48,7 @@ object Device {
   case class RecordTemperature(requestId: Int, temperature: Double, replyTo: ActorRef[TemperatureRecorded]) extends Command
 
   case class TemperatureRecorded(requestId: Int)
+
+  case object Stop extends Command
 
 }

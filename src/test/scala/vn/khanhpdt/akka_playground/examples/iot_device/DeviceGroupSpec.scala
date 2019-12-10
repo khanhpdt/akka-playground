@@ -55,5 +55,27 @@ class DeviceGroupSpec extends ScalaTestWithActorTestKit with WordSpecLike {
       readProbe.expectMessage(DeviceList(4, Set("device1", "device2", "device3")))
     }
 
+    "update when a device actor is stopped" in {
+      val deviceGroup = spawn(DeviceGroup("group1"))
+      val probe = createTestProbe[DeviceRegistered]()
+      val readProbe = createTestProbe[DeviceList]()
+
+      deviceGroup ! RegisterDevice(1, "group1", "device1", probe.ref)
+      val deviceToStop = probe.receiveMessage().deviceRef
+      deviceGroup ! RegisterDevice(2, "group1", "device2", probe.ref)
+      deviceGroup ! RegisterDevice(3, "group1", "device3", probe.ref)
+
+      deviceGroup ! ListAllDevices(4, readProbe.ref)
+      readProbe.expectMessage(DeviceList(4, Set("device1", "device2", "device3")))
+
+      deviceToStop ! Stop
+      probe.expectTerminated(deviceToStop, probe.remainingOrDefault)
+
+      readProbe.awaitAssert {
+        deviceGroup ! ListAllDevices(5, readProbe.ref)
+        readProbe.expectMessage(DeviceList(5, Set("device2", "device3")))
+      }
+    }
+
   }
 }

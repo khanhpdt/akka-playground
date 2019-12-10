@@ -17,7 +17,9 @@ class DeviceGroup(groupId: String, ctx: ActorContext[DeviceGroup.Command]) exten
     msg match {
       case RegisterDevice(requestId, `groupId`, deviceId, replyTo) =>
         val deviceActor = devices.getOrElseUpdate(deviceId, {
-          ctx.spawn(Device(groupId, deviceId), s"device-$deviceId")
+          val device = ctx.spawn(Device(groupId, deviceId), s"device-$deviceId")
+          ctx.watchWith(device, DeviceStopped(groupId, deviceId))
+          device
         })
         replyTo ! DeviceRegistered(requestId, deviceActor)
         this
@@ -26,6 +28,9 @@ class DeviceGroup(groupId: String, ctx: ActorContext[DeviceGroup.Command]) exten
         this
       case ListAllDevices(requestId, replyTo) =>
         replyTo ! DeviceList(requestId, devices.keySet.toSet)
+        this
+      case DeviceStopped(`groupId`, deviceId) =>
+        devices.remove(deviceId)
         this
     }
   }
@@ -53,4 +58,5 @@ object DeviceGroup {
 
   case class DeviceList(requestId: Int, deviceIds: Set[String])
 
+  case class DeviceStopped(groupId: String, deviceId: String) extends Command
 }
