@@ -2,7 +2,6 @@ package vn.khanhpdt.akka_playground.examples.iot_device
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-
 import scala.collection.mutable
 
 class DeviceManager(ctx: ActorContext[DeviceManager.Command]) extends AbstractBehavior[DeviceManager.Command](ctx) {
@@ -33,6 +32,12 @@ class DeviceManager(ctx: ActorContext[DeviceManager.Command]) extends AbstractBe
       case GetDeviceGroup(requestId, groupId, replyTo) =>
         replyTo ! GetDeviceGroupResponse(requestId, deviceGroups.get(groupId))
         this
+      case req@GetDeviceGroupTemperature(requestId, groupId, replyTo) =>
+        deviceGroups.get(groupId) match {
+          case Some(ref) => ref ! req
+          case None => replyTo ! GetDeviceGroupTemperatureResult(requestId, Map.empty)
+        }
+        this
     }
   }
 }
@@ -60,5 +65,20 @@ object DeviceManager {
   case class GetDeviceGroup(requestId: Int, groupId: String, replyTo: ActorRef[GetDeviceGroupResponse]) extends Command
 
   case class GetDeviceGroupResponse(requestId: Int, deviceGroup: Option[ActorRef[DeviceGroup.Command]])
+
+  case class GetDeviceGroupTemperature(requestId: Int, groupId: String, replyTo: ActorRef[GetDeviceGroupTemperatureResult])
+    extends Command with DeviceGroup.Command
+
+  sealed trait DeviceQueryResult
+
+  case class DeviceTemperatureAvailable(value: Double) extends DeviceQueryResult
+
+  case object DeviceTemperatureNotAvailable extends DeviceQueryResult
+
+  case object DeviceNotAvailable extends DeviceQueryResult
+
+  case object DeviceQueryTimedOut extends DeviceQueryResult
+
+  case class GetDeviceGroupTemperatureResult(requestId: Int, results: Map[String, DeviceQueryResult])
 
 }

@@ -2,13 +2,13 @@ package vn.khanhpdt.akka_playground.examples.iot_device
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-
+import scala.concurrent.duration._
 import scala.collection.mutable
 
 class DeviceGroup(groupId: String, ctx: ActorContext[DeviceGroup.Command]) extends AbstractBehavior[DeviceGroup.Command](ctx) {
 
   import DeviceGroup._
-  import DeviceManager.{DeviceList, DeviceRegistered, ListAllDevices, RegisterDevice}
+  import DeviceManager.{DeviceList, DeviceRegistered, ListAllDevices, RegisterDevice, GetDeviceGroupTemperature}
 
   ctx.log.info(s"Device group actor [$groupId] starting...")
 
@@ -38,6 +38,13 @@ class DeviceGroup(groupId: String, ctx: ActorContext[DeviceGroup.Command]) exten
         this
       case Stop =>
         Behaviors.stopped
+      case GetDeviceGroupTemperature(requestId, `groupId`, replyTo) =>
+        val query = ctx.spawn(DeviceGroupTemperatureQuery(devices.toMap, 1.minutes, replyTo), s"group-$groupId-temperature-query")
+        query ! DeviceGroupTemperatureQuery.Query(requestId)
+        this
+      case GetDeviceGroupTemperature(_, gId, _) =>
+        ctx.log.warn(s"Ignore GetDeviceGroupTemperature for another group $gId")
+        this
     }
   }
 

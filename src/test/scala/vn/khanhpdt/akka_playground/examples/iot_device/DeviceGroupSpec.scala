@@ -25,7 +25,7 @@ class DeviceGroupSpec extends ScalaTestWithActorTestKit with WordSpecLike {
 
       val readProbe = createTestProbe[RespondTemperature]()
       deviceActor ! ReadTemperature(44, readProbe.ref)
-      readProbe.expectMessage(RespondTemperature(44, Some(1.2)))
+      readProbe.expectMessage(RespondTemperature(44, "device1", Some(1.2)))
     }
 
     "return the existing device actor" in {

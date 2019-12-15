@@ -25,7 +25,7 @@ class DeviceManagerSpec extends ScalaTestWithActorTestKit with WordSpecLike {
 
       val readProbe = createTestProbe[RespondTemperature]()
       deviceActor ! ReadTemperature(44, readProbe.ref)
-      readProbe.expectMessage(RespondTemperature(44, Some(1.2)))
+      readProbe.expectMessage(RespondTemperature(44, "device1", Some(1.2)))
     }
 
     "reuse existing device actor" in {
@@ -99,6 +99,35 @@ class DeviceManagerSpec extends ScalaTestWithActorTestKit with WordSpecLike {
         deviceManager ! ListAllDevices(6, "group1", readProbe.ref)
         readProbe.expectMessage(DeviceList(6, "group1", Set.empty))
       }
+    }
+
+    "be able to query temperatures of all devices in a group" in {
+      val deviceManager = spawn(DeviceManager())
+      val registerProbe = createTestProbe[DeviceRegistered]()
+      val recordProbe = createTestProbe[TemperatureRecorded]()
+
+      val deviceTemperatures = Map("device1" -> 1.1, "device2" -> 1.2, "device3" -> 1.3)
+      deviceTemperatures.foreach {
+        case (device, temperature) =>
+          deviceManager ! RegisterDevice(1, "group1", device, registerProbe.ref)
+          registerProbe.receiveMessage().deviceRef ! RecordTemperature(1, temperature, recordProbe.ref)
+      }
+
+      val deviceTemperatureNotAvailable = Set("device4", "device5")
+      deviceTemperatureNotAvailable.foreach { device =>
+        deviceManager ! RegisterDevice(1, "group1", device, registerProbe.ref)
+      }
+
+      // register another group to verify this device will not be included in the result
+      deviceManager ! RegisterDevice(1, "group2", "device-2-1", registerProbe.ref)
+
+      val temperatureReadProbe = createTestProbe[GetDeviceGroupTemperatureResult]()
+      deviceManager ! GetDeviceGroupTemperature(5, "group1", temperatureReadProbe.ref)
+
+      val expectedTemperatures =
+        deviceTemperatures.map { case (device, temperature) => device -> DeviceTemperatureAvailable(temperature)} ++
+          deviceTemperatureNotAvailable.map(_ -> DeviceTemperatureNotAvailable)
+      temperatureReadProbe.expectMessage(GetDeviceGroupTemperatureResult(5, expectedTemperatures))
     }
   }
 }
