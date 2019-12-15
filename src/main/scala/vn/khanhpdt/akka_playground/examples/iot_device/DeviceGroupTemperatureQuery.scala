@@ -58,7 +58,7 @@ class DeviceGroupTemperatureQuery(
           waitingDevices -= deviceId
         }
 
-        checkIfDone()
+        respondIfDone()
 
       case WrappedRespondTemperature(respondTemperature) =>
         respondTemperature.temperature match {
@@ -70,7 +70,7 @@ class DeviceGroupTemperatureQuery(
 
         waitingDevices -= respondTemperature.deviceId
 
-        checkIfDone()
+        respondIfDone()
 
       case QueryTimedOut =>
         waitingDevices.foreach { waitingDevice =>
@@ -78,16 +78,16 @@ class DeviceGroupTemperatureQuery(
         }
         waitingDevices = Set.empty
 
-        done()
+        respondDone()
     }
   }
 
-  private def checkIfDone(): Behavior[Command] = {
-    if (waitingDevices.isEmpty) done()
+  private def respondIfDone(): Behavior[Command] = {
+    if (waitingDevices.isEmpty) respondDone()
     else this
   }
 
-  private def done(): Behavior[Command] = {
+  private def respondDone(): Behavior[Command] = {
     replyTo ! GetDeviceGroupTemperatureResult(requestId, repliesSoFar.toMap)
     Behaviors.stopped
   }
